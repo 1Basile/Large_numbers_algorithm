@@ -68,5 +68,7 @@ int main()
         cout << "num1 is not prime by Leman test\n";
     }
     
+    puts("\nProgram was made by Chomko Vasyl, student K-21.");
+    
     return 0;
 }
