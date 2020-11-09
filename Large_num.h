@@ -40,7 +40,8 @@ class Large_num
         Large_num random();
         vector<Large_num> factorize();
 
-        ///laba's method
+        ///Toom Cook method Multiplication
+        Large_num toom_cook(const Large_num& other) const;
         ///Katsuba mathod
         Large_num karatsuba(const Large_num& x);
         ///Schonhage Strassen Multiplication

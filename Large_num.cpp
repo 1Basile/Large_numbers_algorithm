@@ -407,8 +407,88 @@ Large_num Large_num::karatsuba(const Large_num& x) {
     extend_vector(b1,len);
     vector<int> res = vec_karatsuba(a1,b1);
     Large_num res2(res);
+    res2.is_positive = (this->is_positive == x.is_positive);
     return res2;
 }
+
+Large_num Large_num::toom_cook(const Large_num& other) const {
+      if (!this->is_positive && other.is_positive) { return -(other.toom_cook(-(*this))); }
+      if (this->is_positive && !other.is_positive) { return -((-other).toom_cook(*this)); }
+      if (!this->is_positive && !other.is_positive)  { return (-other).toom_cook(-(*this)); }
+
+      Large_num a1, a2, a3, b1, b2, b3, x0, x1, x2, x3, x4;
+      Large_num two("2"), four("4"), three("3");
+
+      vector<int> v_other;
+      vector<int> v_this;
+      v_other.assign(other.digits.begin(), other.digits.end());
+      v_this.assign(this->digits.begin(), this->digits.end());
+
+      vector<int> a1_v, a2_v, a3_v, b1_v, b2_v, b3_v;
+      int len = max(v_this.size(), v_other.size());
+      
+      len += len % 3 == 0 ? 0 : 1 - len % 3;
+
+      {
+      int n = len;
+	    while (n & (n - 1)) { ++n; }
+      v_other.resize(n);
+      v_this.resize(n);
+      } 
+
+      if(len <= MIN_LEN_) {
+        return *this * other; }
+      
+      int k = len / 3;
+      a3_v = {v_this.begin(), v_this.begin()+k};
+      a2_v = {v_this.begin()+k, v_this.begin()+2*k};
+      a1_v = {v_this.begin()+2*k, v_this.end()};
+      
+      b3_v = {v_other.begin(), v_other.begin()+k};
+      b2_v = {v_other.begin()+k, v_other.begin()+2*k};
+      b1_v = {v_other.begin()+2*k, v_other.end()};
+      
+      a3 = {a1_v};
+      a2 = {a2_v};
+      a1 = {a3_v};
+      b3 = {b1_v};
+      b2 = {b2_v};
+      b1 = {b3_v};
+      
+      Large_num p1 = a1;
+      Large_num p2 = a1 + a2 + a3;
+      Large_num p3 = a1 - a2 + a3;
+      Large_num p4 = a1 - a2 - a2 + a3 + a3 + a3 + a3;
+      Large_num p5 = a3;
+      
+      Large_num q1 = b1;
+      Large_num q2 = b1 + b2 + b3;
+      Large_num q3 = b1 - b2 + b3;
+      Large_num q4 = b1 - b2 - b2 + b3 + b3 + b3 + b3;
+      Large_num q5 = b3;
+      
+      Large_num r1 = p1.toom_cook(q1);
+      Large_num r2 = p2.toom_cook(q2);
+      Large_num r3 = p3.toom_cook(q3);
+      Large_num r4 = p4.toom_cook(q4);
+      Large_num r5 = p5.toom_cook(q5);
+      
+      x0 = r1;
+      x4 = r5;
+      x3 = (r4 - r2)/three;
+      x1 = (r2 - r3)/two;
+      x2 = r3 - r1;
+      x3 = (x2 - x3)/two + r5 + r5;
+      x2 = x1 + x2 - x4;
+      x1 = x1 - x3;
+      
+      for (int i=0; i<k; i++) x1.shift_right();
+      for (int i=0; i<2*k; i++) x2.shift_right();
+      for (int i=0; i<3*k; i++) x3.shift_right();
+      for (int i=0; i<4*k; i++) x4.shift_right();
+      
+      return x0+x1+x2+x3+x4;
+    }
 
 Large_num Large_num::shonhage(const Large_num& num_2) {
     int len = max(this->digits.size(),num_2.digits.size());
@@ -504,6 +584,7 @@ Large_num Large_num::to_binary() const noexcept {
   return Large_num(binary_representation);
 }
 Large_num Large_num::inverse_number() const noexcept {
+    if ( !this->is_positive ) return (-*this).inverse_number();
     Large_num zero("0");
     Large_num one("1");
     Large_num two("2");
@@ -527,15 +608,21 @@ sharp_result:
     }
     return r;
 }
-Large_num Large_num::integer_divizion_by(const Large_num& num_2) {
+Large_num Large_num::integer_divizion_by(const Large_num& other) {
     Large_num one("1");
-    long long shift_ = 2 * (static_cast<long long> ((num_2 - one).to_binary().digits.size()));
-    Large_num inverse_divider = num_2.inverse_number();
-    Large_num result = inverse_divider.karatsuba(*this);
-    for (long long i = 1; i <= shift_; i*= 2) {
-        result.shift_left();
+    Large_num zero("0");
+    Large_num two("2");
+
+    if ( *this < other ) return zero;
+    if ( *this == other ) return one;
+    Large_num shift_(to_string((other - one).to_binary().digits.size()));
+    shift_ = shift_ * two;
+    Large_num inverse_divider = other.inverse_number();
+    Large_num result = inverse_divider.shonhage(*this);
+    for (Large_num i = 1; i <= shift_; i = i * two) {
+        if (result.digits.size() != 0) result.shift_left();
     }
-    return *this / num_2;
+    return *this / other;
 
 }
 

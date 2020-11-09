@@ -1,6 +1,5 @@
 #include <bits/stdc++.h>
 #include "Large_num.h"
-#include "./toom_cook_alg.cpp.dependencies"
 
 using namespace std;
 
@@ -10,7 +9,6 @@ int main()
     cout << "Enter 2 integer numbers: ";
     cin >> a >> b;
     Large_num num1(a) , num2(b);
-    Calc toom_cook_alg(b, a);
 
     Large_num result = num1.karatsuba(num2);
     cout << "Karatsuba methods\n";
@@ -33,7 +31,8 @@ int main()
     cout << "\n";
 
     cout << "Toom-Cook multiplication\n";
-    toom_cook_alg.calcToomCook();
+    result = num1.toom_cook(num2);
+    result.print();
     cout << "\n";
 
     cout << "Integer division:\n";
